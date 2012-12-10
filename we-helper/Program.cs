@@ -10,14 +10,10 @@ namespace we_helper {
 
 			var helper = new Helper(dir);
 			helper.IndexFiles();
-			helper.OnChanged = file => {
-				Console.WriteLine(file);
-			};
+			helper.OnChanged = file => Console.WriteLine(DateTime.Now.TimeOfDay + " - " + file);
 
 			var minifier1 = new Microsoft.Ajax.Utilities.Minifier();
-			CssBundleHelper.MinifyCss = css => {
-				return minifier1.MinifyStyleSheet(css);
-			};
+			CssBundleHelper.MinifyCss = minifier1.MinifyStyleSheet;
 
 			var vsExtDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Microsoft\VisualStudio\11.0\Extensions");
 			var lessc_wsf = Utilities.GetFiles(vsExtDir, file => file.Split('\\').Last().ToLower() == "lessc.wsf").FirstOrDefault();
