@@ -51,7 +51,7 @@ namespace we_helper {
 				? new Uri[0]
 				: helper.FindDepenencies(content)
 				.Select(x => x.ToUri(x.StartsWith("/") ? BaseUri : baseUri))
-					.Where(x => x.IsFile)
+					.Where(x => x != null && x.IsFile)
 					.ToArray();
 
 			var detail = _Files.GetOrAdd(file, _ => new FileDetail(_, helper));
