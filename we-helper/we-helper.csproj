@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="JsHelper.cs" />
     <Compile Include="JsBundleHelper.cs" />
     <Compile Include="CssBundleHelper.cs" />
     <Compile Include="Utilties.cs" />

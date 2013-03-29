@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace we_helper {
 	class Helper {
@@ -32,11 +33,13 @@ namespace we_helper {
 		}
 
 		private ConcurrentDictionary<string, FileDetail> _Files = new ConcurrentDictionary<string, FileDetail>(StringComparer.OrdinalIgnoreCase);
+		internal HashSet<string> ProjectFiles { get; set; }
 		public void IndexFiles() {
 			_Files.Clear();
 			var files = Utilities.GetFiles(Directory, _rxFiles);
 			foreach (var file in files) {
-				IndexFile(file, FindHelper(file));
+				if (ProjectFiles == null || ProjectFiles.Contains(file))
+					IndexFile(file, FindHelper(file));
 			}
 		}
 
@@ -51,7 +54,7 @@ namespace we_helper {
 				? new Uri[0]
 				: helper.FindDepenencies(content)
 				.Select(x => x.ToUri(x.StartsWith("/") ? BaseUri : baseUri))
-					.Where(x => x.IsFile)
+					.Where(x => x != null && x.IsFile)
 					.ToArray();
 
 			var detail = _Files.GetOrAdd(file, _ => new FileDetail(_, helper));
@@ -67,7 +70,7 @@ namespace we_helper {
 			return detail;
 		}
 
-		public void FileChanged(string file) {
+		public async Task FileChangedAsync(string file) {
 			if (!System.IO.File.Exists(file)) return;
 			if (!_rxFiles.IsMatch(file)) return;
 
@@ -93,24 +96,20 @@ namespace we_helper {
 				OnChanged(file);
 
 			if (detail.FileHelper != null) {
-				var results = detail.FileHelper.Transform(file);
+				var results = await detail.FileHelper.TransformAsync(file);
 				foreach (var result in results) {
 					WriteIfDifferent(result.Item1, result.Item2);
-					FileChangedAsync(result.Item1);
+					await FileChangedAsync(result.Item1);
 				}
 			}
 
 			var parents = FindFilesThatRequire(file);
 			foreach (var parent in parents)
-				FileChangedAsync(parent);
+				await FileChangedAsync(parent);
 		}
 
 		private string[] FindFilesThatRequire(string file) {
 			return _Files.Where(x => x.Value.Dependencies.Contains(file)).Select(x => x.Key).ToArray();
-		}
-
-		private void FileChangedAsync(string file) {
-			Utilities.Async(() => FileChanged(file));
 		}
 
 		public void FileDeleted(string file) {
@@ -131,8 +130,7 @@ namespace we_helper {
 
 		public void FileRenamed(string old_file, string new_file) {
 			FileDeleted(old_file);
-
-			FileChanged(new_file);
+			FileChangedAsync(new_file).Wait();
 		}
 
 		private void WriteIfDifferent(string file, string content) {

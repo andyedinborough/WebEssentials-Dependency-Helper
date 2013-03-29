@@ -2,11 +2,43 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace we_helper {
 	internal static class Utilities {
+		public static int IndexOf<T>(this IEnumerable<T> list, T find, IEqualityComparer<T> comparer = null) {
+			var findIsNull = find == null;
+			return IndexOf(list, item => {
+				if (item == null && findIsNull) return true;
+				else if (comparer != null)
+					return comparer.Equals(item, find);
+				else if (findIsNull) return item.Equals(find);
+				else return find.Equals(item);
+			});
+		}
+
+		public static int IndexOf<T>(this IEnumerable<T> list, Func<T, bool> predicate) {
+			var n = -1;
+			foreach (var item in list) {
+				n++;
+				if (predicate(item))
+					return n;
+			}
+			return -1;
+		}
+
+		public static async Task<string> ReadAllTextAsync(string file) {
+			using (var filestream = System.IO.File.OpenText(file))
+				return await filestream.ReadToEndAsync();
+		}
+		public static async Task WriteAllTextAsync(string file, string content, Encoding encoding = null) {
+			using (var stream = new System.IO.StreamWriter(file, false, encoding ?? System.Text.Encoding.UTF8)) {
+				await stream.WriteAsync(content);
+			}
+		}
+
 		public static void SafeAdd(this ICollection<string> col, string input) {
 			if (col.Contains(input)) return;
 			lock (col)
@@ -58,8 +90,9 @@ namespace we_helper {
 			return null;
 		}
 
-		public static IEnumerable<Tuple<string, string>> Transform(this IFileHelper helper, string file) {
-			return helper.Transform(file, System.IO.File.ReadAllText(file));
+		public static async Task<IEnumerable<Tuple<string, string>>> TransformAsync(this IFileHelper helper, string file) {
+			var content = await ReadAllTextAsync(file);
+			return await helper.TransformAsync(file, content);
 		}
 
 		public static Task Async(Action action) {

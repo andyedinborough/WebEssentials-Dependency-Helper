@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace we_helper {
 	class LessHelper : IFileHelper {
@@ -22,13 +23,15 @@ namespace we_helper {
 				.ToArray();
 		}
 
-		public IEnumerable<Tuple<string, string>> Transform(string file, string content) {
-			var css = CompileLess(file, content);
-			var baseFile = file.Substring(0, file.Length - ".less".Length);
-			return new[]{
-				Tuple.Create(baseFile + ".css", css),
-				Tuple.Create(baseFile + ".min.css", CssBundleHelper.MinifyCss(css) ),
-			};
+		public async Task<IEnumerable<Tuple<string, string>>> TransformAsync(string file, string content) {
+			return await Task.Run(() => {
+				var css = CompileLess(file, content);
+				var baseFile = file.Substring(0, file.Length - ".less".Length);
+				return new[]{
+					Tuple.Create(baseFile + ".css", css),
+					Tuple.Create(baseFile + ".min.css", CssBundleHelper.MinifyCss(file, css) ),
+				};
+			});
 		}
 	}
 
